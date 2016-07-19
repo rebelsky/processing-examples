@@ -2,10 +2,11 @@
 int WIDTH;
 int HEIGHT;
 final int RADIUS = 15;
-final int MAX_PEOPLE = 20;
+final int MAX_PEOPLE = 100;
 final int DELTA = 2;
 boolean active = true;
 boolean trace = false;
+boolean hsbmode = false;
 int rate = 32;
 
 // Global variables
@@ -17,15 +18,19 @@ void setup() {
   WIDTH = 700;
   HEIGHT = 400;
   frameRate(rate);
-  background(255);
   biased_setup();
   active = true;
+  if (hsbmode) {
+    colorMode(HSB, 360, 100, 100, 100);
+  } else {
+    colorMode(RGB, 255, 255, 255, 255);
+  }
 }
 
 void draw() {
   if (active) {
     if (! trace) {
-      background(255);
+      background();
     }
     check_collisions();
     for (int i = 0; i < MAX_PEOPLE; i++) {
@@ -66,7 +71,7 @@ void keyPressed()
     frameRate(rate);
     break;
   case 't':
-    background(255);
+    background();
     trace = !trace;
     break;
   case '0':
@@ -84,34 +89,39 @@ class Person {
   float yprev;
   float xspeed;
   float yspeed;
-  int red;   // How red the person is
+  int bias;   // How bias the person is
 
   // Constructor
-  Person(float _x, float _y, int _red) {
+  Person(float _x, float _y, int _bias) {
     x = _x;
     y = _y;
     xprev = x;
     yprev = y;
-    red = _red;
+    bias = _bias;
     yspeed = random(9) - 4;
     xspeed = random(9) - 4;
   } // Person
 
   // Show the person
   void display() {
-    if (red < 0) { 
-      red = 0;
+    if (bias < 0) { 
+      bias = 0;
     }
-    if (red > 255) { 
-      red = 255;
+    if (bias > 255) { 
+      bias = 255;
     }
-    if (red > 127) {
-      int blue = int((255-red)*(255-red)/127);
-      fill(red, 0, blue, 63+int(1.5*abs(red-127.5)));
-      stroke(red, 0, blue, 127);
+    if (hsbmode) {
+      fill(bias, 100, 100, 25);
+      stroke(bias, 100, 100, 25);
     } else {
-      fill(red*red/127, 0, 255-red, 63+int(1.5*abs(red-127.5)));
-      stroke(red*red/127, 0, 255-red, 127);
+      if (bias > 127) {
+        int blue = int((255-bias)*(255-bias)/127);
+        fill(bias, 0, blue, 63+int(1.5*abs(bias-127.5)));
+        stroke(bias, 0, blue, 63);
+      } else {
+        fill(bias*bias/127, 0, 255-bias, 63+int(1.5*abs(bias-127.5)));
+        stroke(bias*bias/127, 0, 255-bias, 63);
+      }
     }
     if (trace) {
       line(xprev, yprev, x, y);
@@ -141,7 +151,7 @@ class Person {
       yspeed = abs(yspeed);
     }
     // Update politics randomly
-    red += 5 - int(random(11));
+    bias += 5 - int(random(11));
   }
 
   float distance(Person other) {
@@ -152,17 +162,17 @@ class Person {
 
 // Functions
 
-// A setup that puts reds on one side and blues on the other.
+// A setup that puts biass on one side and blues on the other.
 void biased_setup() {
   for (int i = 0; i < MAX_PEOPLE; i++) {
-    int red = initial_red();
+    int bias = initial_bias();
     int x;
-    if (red > 127) {
+    if (bias > 127) {
       x = int(WIDTH/2 + random(WIDTH/2));
     } else {
       x = int(random(WIDTH/2));
     }
-    people[i] = new Person(x, random(HEIGHT), red);
+    people[i] = new Person(x, random(HEIGHT), bias);
   } // for
   finish_setup();
 } // biased_setup
@@ -170,9 +180,9 @@ void biased_setup() {
 // A setup that puts things in random places
 void unbiased_setup() {
   for (int i = 0; i < MAX_PEOPLE; i++) {
-    int red = initial_red(); 
+    int bias = initial_bias(); 
     int(random(256));
-    people[i] = new Person(random(WIDTH), random(HEIGHT), red);
+    people[i] = new Person(random(WIDTH), random(HEIGHT), bias);
   } // for
   finish_setup();
 } // unbiased_setup
@@ -193,10 +203,18 @@ void setup_0() {
 
 void finish_setup() {
   fix_overlaps();
-  background(255);
+  background();
   active = true;
   draw();
   active = false;
+}
+
+void background() {
+  if (hsbmode) {
+    background(359);
+  } else {
+    background(255);
+  }
 }
 
 void fix_overlaps() {
@@ -255,35 +273,35 @@ void update_bias(Person a, Person b) {
   update_bias_1(a, b);
 }
 
-// Mechanism 1 for updating biases.  If the other person is red, become more
-// red.  If the other preson is blue, become more blue.  If the other person
+// Mechanism 1 for updating biases.  If the other person is bias, become more
+// bias.  If the other preson is blue, become more blue.  If the other person
 // is neutral, become more neutral.
 void update_bias_1(Person a, Person b) {
   // Determine current bias
-  float abias = a.red - 127.5;
-  float bbias = b.red - 127.5;
+  float abias = a.bias - 127.5;
+  float bbias = b.bias - 127.5;
 
   // Update colors
   if (abias > 40) {
-    b.red += DELTA;
+    b.bias += DELTA;
   } else if (abias < -40) {
-    b.red -= DELTA;
+    b.bias -= DELTA;
   } else {
-    if (b.red > 127.5) {
-      b.red -= DELTA;
+    if (b.bias > 127.5) {
+      b.bias -= DELTA;
     } else {
-      b.red += DELTA;
+      b.bias += DELTA;
     }
   }
   if (bbias > 40) {
-    a.red += DELTA;
+    a.bias += DELTA;
   } else if (bbias < -40) {
-    a.red -= DELTA;
+    a.bias -= DELTA;
   } else {
-    if (a.red > 127.5) {
-      a.red -= DELTA;
+    if (a.bias > 127.5) {
+      a.bias -= DELTA;
     } else {
-      a.red += DELTA;
+      a.bias += DELTA;
     }
   }
 } // update_bias_1
@@ -291,44 +309,44 @@ void update_bias_1(Person a, Person b) {
 // Mechanism 2 for updating biases.  Weighted average with the other person
 // then bias toward common factor.
 void update_bias_2(Person a, Person b) {
-  int total_red = a.red + b.red;
-  a.red = round((4*a.red + total_red)/6.0);
-  b.red = round((4*b.red + total_red)/6.0);
-  int bias = total_red - 255;
+  int total_bias = a.bias + b.bias;
+  a.bias = round((4*a.bias + total_bias)/6.0);
+  b.bias = round((4*b.bias + total_bias)/6.0);
+  int bias = total_bias - 255;
   if (bias > 64) {
-    a.red += DELTA;
-    b.red += DELTA;
+    a.bias += DELTA;
+    b.bias += DELTA;
   } else if (bias < -64) {
-    a.red -= DELTA;
-    b.red -= DELTA;
+    a.bias -= DELTA;
+    b.bias -= DELTA;
   } else {
-    if (a.red > 127) { 
-      a.red -= DELTA;
+    if (a.bias > 127) { 
+      a.bias -= DELTA;
     } else {
-      a.red += DELTA;
+      a.bias += DELTA;
     }
-    if (b.red > 127) {
-      b.red -= DELTA;
+    if (b.bias > 127) {
+      b.bias -= DELTA;
     } else {
-      b.red += DELTA;
+      b.bias += DELTA;
     }
   }
 } // update_bias_2
 
-// Determine a "random" red color for a person.
-int initial_red() {
-  return initial_red_1();
+// Determine a "random" bias color for a person.
+int initial_bias() {
+  return initial_bias_1();
 }
 
-int initial_red_0() {
+int initial_bias_0() {
   return 32 + int(random(192));
 }
 
-int initial_red_1() {
+int initial_bias_1() {
   return 64 + 127*int(random(2));
 }
 
-int initial_red_2() {
+int initial_bias_2() {
   return int(random(256));
 }
 
